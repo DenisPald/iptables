@@ -59,26 +59,29 @@ class TrafficInspector:
 
             self.traffic_data[source_ip] = self.traffic_data.get(source_ip, 0) + packet_length
 
-            if self.traffic_data[source_ip] > 1200 and source_ip not in self.flagged_ips:
-                self.flagged_ips.add(source_ip)
-                self.table_flags.insert("", "end", values=(source_ip, "High Data Volume"))
-
-            if source_ip not in self.denied_ips:
-                self.table_overview.insert("", "end", values=(source_ip, port, packet_length))
-
             if source_ip not in self.port_scan_data:
                 self.port_scan_data[source_ip] = {}
 
-            if port == -1 or port > 100_000:
-                self.flagged_ips.add(source_ip)
-                self.table_flags.insert("", "end", values=(source_ip, "Strange port"))
-
             self.port_scan_data[source_ip][port] = self.port_scan_data[source_ip].get(port, 0) + 1
+
+            if self.traffic_data[source_ip] > 1500 and source_ip not in self.flagged_ips:
+                if source_ip not in self.flagged_ips:
+                    self.flagged_ips.add(source_ip)
+                    self.table_flags.insert("", "end", values=(source_ip, "High Data Volume"))
+
+            if port == -1 or port > 60_000:
+                if source_ip not in self.flagged_ips:
+                    self.flagged_ips.add(source_ip)
+                    self.table_flags.insert("", "end", values=(source_ip, "Strange port"))
+
 
             if len(self.port_scan_data[source_ip]) > 10:
                 if source_ip not in self.flagged_ips:
                     self.flagged_ips.add(source_ip)
                     self.table_flags.insert("", "end", values=(source_ip, "Port Scanning"))
+
+            if source_ip not in self.denied_ips:
+                self.table_overview.insert("", "end", values=(source_ip, port, packet_length))
 
     def _start_sniffing(self):
         monitor_thread = threading.Thread(target=self._sniff_traffic, daemon=True)
